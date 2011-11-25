@@ -1,0 +1,2 @@
+""" Doctor Skype """
+import doctorskype
