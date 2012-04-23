@@ -38,11 +38,16 @@ class DbusChecker(object):
             original = original[len("#A USERSTATUS "):]
             temp = 'AWAY' if original != 'AWAY' else 'INVISIBLE'
             res2 = self.skype.Invoke('#B SET USERSTATUS ' + temp)
+            time.sleep(1)
+            state2 = self.skype.Invoke('#D GET USERSTATUS')
             res3 = self.skype.Invoke('#C SET USERSTATUS ' + original)
-            failure = (res2 != "#B USERSTATUS " + temp) or (res3 != "#C USERSTATUS " + original)
+            time.sleep(1)
+            state3 = self.skype.Invoke('#E GET USERSTATUS')
+            failure = (res2 != "#B USERSTATUS " + temp or res3 != "#C USERSTATUS " + original or 
+                        state2 != '#D USERSTATUS ' + temp or state3 != '#E USERSTATUS ' + original)
         except DBusException, e:
             #no reply - failure
-            print "No responce from dbus"
+            print "No response from dbus"
             print e
             failure = True
      
