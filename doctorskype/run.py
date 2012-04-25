@@ -1,9 +1,12 @@
+#!/usr/bin/env python
 """ Executable for running doctor skype as daemon """
 
 import logging.config
 import os.path
 import sys
 import time
+import lockfile
+import argparse
 
 _logger = logging.getLogger()
 
@@ -33,7 +36,6 @@ def _init_logging(log_file):
     _logger.info("Initialized logging")
 
 if __name__ == "__main__":
-    import argparse
     parser = argparse.ArgumentParser(description='Run skype watching doctorskype')
     parser.add_argument('-l', '--log-file', help='log file path, default ./doctor-skype.log', default="./doctor-skype.log")
     parser.add_argument('-n', '--interactive', help='specify to run in non-daemon mode', action='store_true')
@@ -50,6 +52,7 @@ if __name__ == "__main__":
     else:
         try:
             import daemon
+            import daemon.pidlockfile
         except ImportError:
             _logger.exception("Failed to load python-daemon module")
             sys.stderr.write("python-daemon library should be installed\n")
@@ -59,7 +62,15 @@ if __name__ == "__main__":
         for handler in logging.getLogger().handlers:
             if getattr(handler, 'stream', False):
                 streams.append(handler.stream)
-        with daemon.DaemonContext(files_preserve=streams):
-            _logger.info("Start doctor skype in daemon mode")
-            run(args.interval)
+
+        try:
+            pidfile = os.path.abspath(os.path.join(__file__, '..', '..', 'doctor_skype.pid'))
+            _logger.debug('Use pidfile %s', pidfile)
+            with daemon.DaemonContext(files_preserve=streams, 
+                                      pidfile=daemon.pidlockfile.TimeoutPIDLockFile(pidfile, 2)):
+                _logger.info("Start doctor skype in daemon mode")
+                run(args.interval)
+        except:
+            _logger.exception("Exception while running daemon")
+            raise
 
