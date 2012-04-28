@@ -41,7 +41,7 @@ class DbusChecker(object):
                 self.connect()
             original = self.skype.Invoke ('#A GET USERSTATUS')
             original = original[len("#A USERSTATUS "):]
-            temp = 'AWAY' if original != 'AWAY' else 'INVISIBLE'
+            temp = 'AWAY' if original != 'AWAY' else 'NA'
             res2 = self.skype.Invoke('#B SET USERSTATUS ' + temp)
             time.sleep(1)
             state2 = self.skype.Invoke('#D GET USERSTATUS')
