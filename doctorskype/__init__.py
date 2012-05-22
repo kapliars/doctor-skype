@@ -1,3 +1,2 @@
 """ Doctor Skype """
-from doctorskype import DbusChecker as Checker
-
+#from doctorskype import DbusChecker as Checker

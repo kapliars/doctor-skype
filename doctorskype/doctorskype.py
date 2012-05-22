@@ -8,11 +8,16 @@ import time
  
 _logger = logging.getLogger(__name__)
 
+OFFLINE_SLEEP = 20 # 20 seconds to wait to connect
+
 class DbusChecker(object):
 
-    def __init__(self, name='DoctorSkype'):
+    def __init__(self, name='DoctorSkype', ignore_offline=True, ignore_invis=True):
         self.name = name
         self.skype = None
+        self.ignore_offline = ignore_offline
+        self.ignore_invis = ignore_invis
+        
 
     def connect(self):
         _logger.info("Establish new connection to skype dbus")
@@ -23,6 +28,8 @@ class DbusChecker(object):
         self.skype.Invoke('#A PROTOCOL 8')
 
     def check(self):
+        _logger.debug("Check skype...")
+
         failure = None
         try:
             if self.skype is not None:
@@ -41,17 +48,22 @@ class DbusChecker(object):
                 self.connect()
             original = self.skype.Invoke ('#A GET USERSTATUS')
             original = original[len("#A USERSTATUS "):]
-            temp = 'AWAY' if original != 'AWAY' else 'NA'
-            res2 = self.skype.Invoke('#B SET USERSTATUS ' + temp)
-            time.sleep(1)
-            state2 = self.skype.Invoke('#D GET USERSTATUS')
-            _logger.debug("Set temp status [%s], response %s, result %s", temp, res2, state2)
-            res3 = self.skype.Invoke('#C SET USERSTATUS ' + original)
-            time.sleep(1)
-            state3 = self.skype.Invoke('#E GET USERSTATUS')
-            _logger.debug("Reset original status [%s], response %s, results %s", original, res3, state3)
-            failure = (res2 != "#B USERSTATUS " + temp or res3 != "#C USERSTATUS " + original or 
-                        state2 != '#D USERSTATUS ' + temp or state3 != '#E USERSTATUS ' + original)
+            if self.ignore_offline and original == "OFFLINE":
+                _logger.info("Ignore OFFLINE status")
+            elif self.ignore_invis and original == "INVISIBLE":
+                _logger.info("Ignore INVISIBLE status")
+            else:
+                temp = 'AWAY' if original != 'AWAY' else 'NA'
+                res2 = self.skype.Invoke('#B SET USERSTATUS ' + temp)
+                time.sleep(OFFLINE_SLEEP if original == "OFFLINE" else 1)
+                state2 = self.skype.Invoke('#D GET USERSTATUS')
+                _logger.debug("Set temp status [%s], response %s, result %s", temp, res2, state2)
+                res3 = self.skype.Invoke('#C SET USERSTATUS ' + original)
+                time.sleep(1)
+                state3 = self.skype.Invoke('#E GET USERSTATUS')
+                _logger.debug("Reset original status [%s], response %s, results %s", original, res3, state3)
+                failure = (res2 != "#B USERSTATUS " + temp or res3 != "#C USERSTATUS " + original or 
+                           state2 != '#D USERSTATUS ' + temp or state3 != '#E USERSTATUS ' + original)
         except DBusException, e:
             #no reply - failure
             _logger.exception("No response from dbus")
